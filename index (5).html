@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ortak Oyuncu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pitch-dark:#0F2E1F;
+    --pitch:#163C27;
+    --pitch-light:#1F4E31;
+    --line:#EAF4EC;
+    --line-dim:rgba(234,244,236,0.35);
+    --gold:#E8B23A;
+    --gold-bright:#F5C556;
+    --red:#D65A4A;
+    --ink:#0B1A10;
+    --paper:#F4F7F2;
+    --muted:#9FBBA6;
+  }
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+  }
+  :root[data-theme="light"]{
+    --pitch-dark:#0F2E1F;
+    --pitch:#163C27;
+    --pitch-light:#1F4E31;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      color-scheme: dark;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: repeating-linear-gradient(90deg, var(--pitch) 0px, var(--pitch) 64px, var(--pitch-light) 64px, var(--pitch-light) 128px);
+    min-height:100vh;
+    font-family:'Work Sans', system-ui, -apple-system, sans-serif;
+    color: var(--line);
+    display:flex;
+    justify-content:center;
+    padding: 20px 14px 48px;
+  }
+  .field-lines{
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(circle at 50% 8%, transparent 0 52px, var(--line-dim) 52px 54px, transparent 54px),
+      linear-gradient(var(--line-dim) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 2px;
+    background-position: 0 0, 0 0;
+    background-repeat: no-repeat, no-repeat;
+    opacity:0.5;
+  }
+  .wrap{
+    position:relative; z-index:1;
+    width:100%; max-width:480px;
+  }
+  h1.brand{
+    font-family:'Teko', sans-serif;
+    font-weight:600;
+    font-size:44px;
+    letter-spacing:0.5px;
+    line-height:0.9;
+    margin: 4px 0 2px;
+    color: var(--line);
+  }
+  .brand-sub{
+    font-size:13px;
+    color: var(--muted);
+    margin: 0 0 22px;
+    font-weight:500;
+  }
+  .card{
+    background: rgba(11,26,16,0.55);
+    border: 1px solid rgba(234,244,236,0.14);
+    border-radius: 14px;
+    padding: 22px 18px;
+    backdrop-filter: blur(2px);
+    margin-bottom:14px;
+  }
+  label{
+    display:block;
+    font-size:12.5px;
+    color: var(--muted);
+    margin-bottom:6px;
+    font-weight:600;
+  }
+  input[type=text]{
+    width:100%;
+    background: rgba(244,247,242,0.06);
+    border: 1.5px solid rgba(234,244,236,0.25);
+    border-radius: 9px;
+    padding: 12px 13px;
+    color: var(--line);
+    font-size: 16px;
+    font-family:'Work Sans', sans-serif;
+    outline:none;
+    transition: border-color .15s;
+  }
+  input[type=text]:focus{
+    border-color: var(--gold);
+  }
+  input[type=text]::placeholder{ color: rgba(159,187,166,0.55); }
+  .field{ margin-bottom:14px; position:relative; }
+  .field:last-child{ margin-bottom:0; }
+  button{
+    font-family:'Work Sans', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    border:none;
+    border-radius:9px;
+    padding:13px 18px;
+    cursor:pointer;
+    width:100%;
+    transition: transform .08s, filter .15s;
+  }
+  button:active{ transform: scale(0.98); }
+  .btn-primary{ background: var(--gold); color: var(--ink); }
+  .btn-primary:hover{ filter:brightness(1.08); }
+  .btn-primary:disabled{ opacity:0.4; cursor:not-allowed; }
+  .btn-ghost{ background: rgba(234,244,236,0.08); color: var(--line); border:1px solid rgba(234,244,236,0.2); }
+  .btn-ghost:hover{ background: rgba(234,244,236,0.14); }
+  .row{ display:flex; gap:10px; }
+  .row > *{ flex:1; }
+  .divider-or{
+    text-align:center; color: var(--muted); font-size:12px; font-weight:700;
+    letter-spacing:1px; margin: 16px 0; position:relative;
+  }
+  .divider-or::before, .divider-or::after{
+    content:''; position:absolute; top:50%; width:40%; height:1px; background: rgba(234,244,236,0.15);
+  }
+  .divider-or::before{ left:0; } .divider-or::after{ right:0; }
+
+  .autocomplete-list{
+    position:absolute; left:0; right:0; top:calc(100% + 4px);
+    background: #10281A;
+    border: 1px solid rgba(234,244,236,0.25);
+    border-radius: 9px;
+    max-height: 240px; overflow-y:auto;
+    z-index: 30;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+  }
+  .autocomplete-item{
+    padding: 11px 13px; font-size:14.5px; cursor:pointer; border-bottom:1px solid rgba(234,244,236,0.08);
+  }
+  .autocomplete-item:last-child{ border-bottom:none; }
+  .autocomplete-item:hover, .autocomplete-item.active{ background: rgba(232,178,58,0.16); }
+  .autocomplete-item .sub{ color: var(--muted); font-size:12px; display:block; margin-top:2px; }
+
+  .code-badge{
+    font-family:'Teko', sans-serif;
+    font-size: 38px;
+    letter-spacing: 6px;
+    background: rgba(232,178,58,0.12);
+    border: 1.5px dashed var(--gold);
+    color: var(--gold-bright);
+    text-align:center;
+    border-radius: 10px;
+    padding: 10px 0 6px;
+    margin: 10px 0 4px;
+    user-select:all;
+  }
+  .hint{ font-size:12.5px; color: var(--muted); text-align:center; margin:0; }
+
+  .players-row{ display:flex; align-items:center; justify-content:center; gap:14px; margin: 6px 0 18px; }
+  .player-chip{
+    display:flex; flex-direction:column; align-items:center; gap:6px; flex:1; text-align:center;
+  }
+  .avatar{
+    width:52px; height:52px; border-radius:50%;
+    background: var(--pitch-light); border:2px solid var(--gold);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Teko', sans-serif; font-size:22px; color: var(--gold-bright);
+  }
+  .avatar.empty{ border-color: rgba(234,244,236,0.25); color: var(--muted); border-style:dashed; }
+  .vs{
+    font-family:'Teko', sans-serif; font-size:26px; color: var(--muted);
+  }
+  .pname{ font-size:13px; font-weight:700; }
+  .pstatus{ font-size:11px; color: var(--muted); }
+
+  .club-vs{
+    display:flex; align-items:stretch; gap:10px; margin-bottom:18px;
+  }
+  .club-box{
+    flex:1; background: rgba(11,26,16,0.6); border:1.5px solid rgba(234,244,236,0.2);
+    border-radius:12px; padding:16px 10px; text-align:center;
+  }
+  .club-box .lbl{ font-size:11px; color:var(--muted); font-weight:700; letter-spacing:0.5px; margin-bottom:6px;}
+  .club-box .name{ font-family:'Teko', sans-serif; font-size:24px; line-height:1.05; color:var(--line); }
+  .vs-mid{
+    font-family:'Teko', sans-serif; font-size:22px; color: var(--gold); align-self:center; padding:0 2px;
+  }
+
+  .timer{
+    font-family:'Teko', sans-serif; font-size:52px; text-align:center; line-height:0.9;
+    color: var(--gold-bright); margin: 2px 0 16px;
+    font-variant-numeric: tabular-nums;
+  }
+  .timer.low{ color: var(--red); }
+
+  .guess-list{ margin-top:14px; }
+  .guess-item{
+    display:flex; align-items:center; gap:8px; padding:9px 11px; border-radius:8px; margin-bottom:6px;
+    background: rgba(214,90,74,0.14); border:1px solid rgba(214,90,74,0.3); font-size:13.5px;
+  }
+  .guess-item .x{ color: var(--red); font-weight:800; }
+
+  .center-msg{ text-align:center; padding: 30px 10px; }
+  .center-msg .big{ font-family:'Teko', sans-serif; font-size:34px; color: var(--gold-bright); }
+  .center-msg .small{ color: var(--muted); font-size:14px; margin-top:6px; }
+
+  .footer-note{ text-align:center; font-size:11.5px; color: var(--muted); margin-top:10px; line-height:1.5; }
+  .link-btn{ background:none; border:none; color:var(--gold-bright); font-size:12.5px; font-weight:700; cursor:pointer; padding:4px; text-decoration:underline; width:auto; }
+  .error-msg{ color: var(--red); font-size:13px; margin-top:8px; text-align:center; }
+  .winner-clubs{ font-size:13px; color:var(--muted); margin-top:4px; }
+</style>
+</head>
+<body>
+<div class="field-lines"></div>
+<div class="wrap" id="app"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCImCPqcbxvsHpCapb0uuYJtoEj3flhvA4",
+  authDomain: "project-5023159948598724076.firebaseapp.com",
+  projectId: "project-5023159948598724076",
+  storageBucket: "project-5023159948598724076.firebasestorage.app",
+  messagingSenderId: "223183531939",
+  appId: "1:223183531939:web:87304d37202f7d77787416",
+  measurementId: "G-6TBTJMHPFF"
+};
+const fbApp = initializeApp(firebaseConfig);
+const firestore = getFirestore(fbApp);
+
+/* Claude'un db API'sine benzer, ince bir Firestore sarmalayıcı.
+   Böylece aşağıdaki oyun kodu değişmeden çalışıyor. */
+function roomRef(code){
+  return doc(firestore, "rooms", code);
+}
+const dbWrapper = {
+  doc(path){
+    const [, code] = path.split('/'); // "rooms/CODE"
+    const ref = roomRef(code);
+    return {
+      async get(){
+        const snap = await getDoc(ref);
+        return { exists: snap.exists(), data: snap.data() };
+      },
+      async set(obj){ return setDoc(ref, obj); },
+      async update(obj){ return updateDoc(ref, obj); },
+      onSnapshot(cb, errCb){
+        return onSnapshot(ref, snap=>{
+          cb({ exists: snap.exists(), data: snap.data() });
+        }, errCb);
+      }
+    };
+  }
+};
+
+/* ============ VERİ SETİ ============
+   Kapsam: Premier Lig, La Liga, Bundesliga, Serie A, Ligue 1, Süper Lig,
+   Suudi Pro Ligi, MLS + oyuncuların kariyerlerindeki diğer kulüpler.
+   Format: [isim, [kulüp1, kulüp2, ...]]
+*/
+const PLAYERS = [
+["Cristiano Ronaldo",["Sporting CP","Manchester United","Real Madrid","Juventus","Al Nassr"]],
+["Lionel Messi",["Barcelona","PSG","Inter Miami"]],
+["Neymar",["Santos","Barcelona","PSG","Al Hilal"]],
+["Kylian Mbappé",["Monaco","PSG","Real Madrid"]],
+["Karim Benzema",["Lyon","Real Madrid","Al Ittihad"]],
+["Sergio Ramos",["Sevilla","Real Madrid","PSG"]],
+["Luka Modrić",["Dinamo Zagreb","Tottenham","Real Madrid","AC Milan"]],
+["Toni Kroos",["Bayer Leverkusen","Bayern Munich","Real Madrid"]],
+["N'Golo Kanté",["Caen","Leicester City","Chelsea","Al Ittihad"]],
+["Riyad Mahrez",["Leicester City","Manchester City","Al Ahli"]],
+["Kalidou Koulibaly",["Genk","Napoli","Chelsea","Al Hilal"]],
+["Jordan Henderson",["Liverpool","Al Ettifaq","Ajax"]],
+["Sadio Mané",["Salzburg","Southampton","Liverpool","Bayern Munich","Al Nassr"]],
+["Roberto Firmino",["Hoffenheim","Liverpool","Al Ahli"]],
+["Fabinho",["Real Madrid","Monaco","Liverpool","Al Ittihad"]],
+["Marcelo Brozović",["Dinamo Zagreb","Inter Milan","Al Nassr"]],
+["Rúben Neves",["Porto","Wolves","Al Hilal"]],
+["Aleksandar Mitrović",["Anderlecht","Newcastle","Fulham","Al Hilal"]],
+["Yannick Carrasco",["Monaco","Atletico Madrid","Al Shabab"]],
+["Seko Fofana",["Fulham","Udinese","Lens","Al Nassr"]],
+["Cengiz Ünder",["Istanbul Başakşehir","Roma","Leicester City","Marseille","Fenerbahçe"]],
+["Arda Güler",["Fenerbahçe","Real Madrid"]],
+["Hakan Çalhanoğlu",["Hamburger SV","Bayer Leverkusen","AC Milan","Inter Milan"]],
+["Burak Yılmaz",["Galatasaray","Trabzonspor","Beşiktaş","Lille"]],
+["Mauro Icardi",["Sampdoria","Inter Milan","PSG","Galatasaray"]],
+["Dries Mertens",["PSV","Napoli","Galatasaray"]],
+["Radamel Falcao",["River Plate","Porto","Atletico Madrid","Monaco","Manchester United","Chelsea","Galatasaray","Rayo Vallecano"]],
+["Wesley Sneijder",["Ajax","Real Madrid","Inter Milan","Galatasaray","Nice"]],
+["Didier Drogba",["Marseille","Chelsea","Galatasaray"]],
+["Robin van Persie",["Feyenoord","Arsenal","Manchester United","Fenerbahçe"]],
+["Nani",["Sporting CP","Manchester United","Fenerbahçe","Valencia","Lazio","Orlando City"]],
+["Mesut Özil",["Werder Bremen","Real Madrid","Arsenal","Fenerbahçe","Istanbul Başakşehir"]],
+["Luis Suárez",["Ajax","Liverpool","Barcelona","Atletico Madrid","Inter Miami"]],
+["Gonzalo Higuaín",["River Plate","Real Madrid","Napoli","Juventus","AC Milan","Chelsea","Inter Miami"]],
+["Ángel Di María",["Benfica","Real Madrid","PSG","Juventus"]],
+["Paulo Dybala",["Palermo","Juventus","Roma"]],
+["Edin Džeko",["Wolfsburg","Manchester City","Roma","Inter Milan","Fenerbahçe"]],
+["Arturo Vidal",["Bayer Leverkusen","Juventus","Bayern Munich","Barcelona","Inter Milan","Flamengo"]],
+["Miralem Pjanić",["Lyon","Roma","Juventus","Barcelona","Beşiktaş"]],
+["Douglas Costa",["Shakhtar Donetsk","Bayern Munich","Juventus","Gremio"]],
+["Sami Khedira",["Stuttgart","Real Madrid","Juventus","Hertha Berlin"]],
+["Zlatan Ibrahimović",["Malmö","Ajax","Juventus","Inter Milan","Barcelona","AC Milan","PSG","Manchester United","LA Galaxy"]],
+["David Beckham",["Manchester United","Real Madrid","LA Galaxy","AC Milan","PSG"]],
+["Steven Gerrard",["Liverpool","LA Galaxy"]],
+["Frank Lampard",["Chelsea","Manchester City","New York City FC"]],
+["Andrea Pirlo",["AC Milan","Juventus","New York City FC"]],
+["Wayne Rooney",["Everton","Manchester United","DC United"]],
+["Thierry Henry",["Monaco","Juventus","Arsenal","Barcelona","New York Red Bulls"]],
+["Kaká",["São Paulo","AC Milan","Real Madrid","Orlando City"]],
+["Carlos Tevez",["Boca Juniors","West Ham","Manchester United","Manchester City","Juventus"]],
+["Gareth Bale",["Southampton","Tottenham","Real Madrid","Los Angeles FC"]],
+["Javier Hernández",["Chivas","Manchester United","Real Madrid","Bayer Leverkusen","West Ham","Sevilla","LA Galaxy"]],
+["Giovani dos Santos",["Barcelona","Tottenham","Mallorca","LA Galaxy"]],
+["Sebastian Giovinco",["Juventus","Parma","Empoli","Toronto FC","Al Hilal"]],
+["Bastian Schweinsteiger",["Bayern Munich","Manchester United","Chicago Fire"]],
+["David Villa",["Valencia","Barcelona","Atletico Madrid","New York City FC","Vissel Kobe"]],
+["Sergio Busquets",["Barcelona","Inter Miami"]],
+["Jordi Alba",["Valencia","Barcelona","Inter Miami"]],
+["Jude Bellingham",["Birmingham City","Borussia Dortmund","Real Madrid"]],
+["Erling Haaland",["Molde","Salzburg","Borussia Dortmund","Manchester City"]],
+["Vinícius Júnior",["Flamengo","Real Madrid"]],
+["Rodrygo",["Santos","Real Madrid"]],
+["Federico Valverde",["Peñarol","Real Madrid"]],
+["Declan Rice",["West Ham","Arsenal"]],
+["Harry Kane",["Tottenham","Bayern Munich"]],
+["Robert Lewandowski",["Borussia Dortmund","Bayern Munich","Barcelona"]],
+["Thomas Müller",["Bayern Munich","Vancouver Whitecaps"]],
+["Kevin De Bruyne",["Genk","Chelsea","Wolfsburg","Manchester City","Napoli"]],
+["Jorginho",["Verona","Napoli","Chelsea","Arsenal"]],
+["Granit Xhaka",["Basel","Borussia Mönchengladbach","Arsenal","Bayer Leverkusen"]],
+["Thiago Alcântara",["Barcelona","Bayern Munich","Liverpool"]],
+["Antoine Griezmann",["Real Sociedad","Atletico Madrid","Barcelona"]],
+["Ousmane Dembélé",["Rennes","Borussia Dortmund","Barcelona","PSG"]],
+["Philippe Coutinho",["Inter Milan","Liverpool","Barcelona","Bayern Munich","Aston Villa"]],
+["Memphis Depay",["PSV","Manchester United","Lyon","Barcelona","Atletico Madrid","Corinthians"]],
+["Paul Pogba",["Manchester United","Juventus","Monaco"]],
+["Alexis Sánchez",["Udinese","Barcelona","Arsenal","Manchester United","Inter Milan","Marseille"]],
+["Sergej Milinković-Savić",["Lazio","Al Hilal"]],
+["Achraf Hakimi",["Real Madrid","Borussia Dortmund","Inter Milan","PSG"]],
+["Kingsley Coman",["PSG","Juventus","Bayern Munich","Al Nassr"]],
+["Leroy Sané",["Schalke 04","Manchester City","Bayern Munich","Galatasaray"]],
+["Antony",["São Paulo","Ajax","Manchester United","Real Betis"]],
+["Casemiro",["São Paulo","Real Madrid","Manchester United"]],
+["Raphaël Varane",["Lens","Real Madrid","Manchester United","Como"]],
+["David de Gea",["Atletico Madrid","Manchester United","Fiorentina"]],
+["Marco Reus",["Borussia Mönchengladbach","Borussia Dortmund","LA Galaxy"]],
+["Mats Hummels",["Bayern Munich","Borussia Dortmund","Roma"]],
+["Kai Havertz",["Bayer Leverkusen","Chelsea","Arsenal"]],
+["Timo Werner",["Stuttgart","RB Leipzig","Chelsea","Tottenham"]],
+["Victor Osimhen",["Wolfsburg","Charleroi","Lille","Napoli","Galatasaray"]],
+];
+
+const CLUBS = [...new Set(PLAYERS.flatMap(p => p[1]))].sort((a,b)=>a.localeCompare(b,'tr'));
+
+function normTr(s){
+  return s.toLowerCase()
+    .replaceAll('ı','i').replaceAll('İ','i').replaceAll('ş','s').replaceAll('ç','c')
+    .replaceAll('ğ','g').replaceAll('ü','u').replaceAll('ö','o')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+/* ============ DURUM ============ */
+let db = null;
+let ready = false;
+let myId = null;
+let myName = '';
+let roomCode = null;
+let unsub = null;
+let roomData = null;
+let timerInterval = null;
+
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem('ortakoyuncu_session');
+    if(raw){
+      const s = JSON.parse(raw);
+      myId = s.myId || null; myName = s.myName || ''; roomCode = s.roomCode || null;
+    }
+  }catch(e){}
+  if(!myId){ myId = 'p_' + Math.random().toString(36).slice(2,10); }
+}
+function saveLocal(){
+  try{ localStorage.setItem('ortakoyuncu_session', JSON.stringify({myId, myName, roomCode})); }catch(e){}
+}
+
+function genRoomCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c='';
+  for(let i=0;i<5;i++) c += chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+
+const app = document.getElementById('app');
+
+/* ============ AUTOCOMPLETE ============ */
+function attachAutocomplete(inputEl, listEl, sourceArr, onPick, getSubtitle){
+  let items = [];
+  let activeIdx = -1;
+  function render(){
+    const q = normTr(inputEl.value.trim());
+    listEl.innerHTML = '';
+    if(!q){ listEl.style.display='none'; items=[]; return; }
+    items = sourceArr.filter(x => normTr(typeof x==='string'?x:x[0]).includes(q)).slice(0,8);
+    if(items.length===0){ listEl.style.display='none'; return; }
+    listEl.style.display='block';
+    items.forEach((it,i)=>{
+      const label = typeof it==='string' ? it : it[0];
+      const div = document.createElement('div');
+      div.className='autocomplete-item' + (i===activeIdx?' active':'');
+      div.innerHTML = label + (getSubtitle ? `<span class="sub">${getSubtitle(it)}</span>` : '');
+      div.onmousedown = (e)=>{ e.preventDefault(); pick(it); };
+      listEl.appendChild(div);
+    });
+  }
+  function pick(it){
+    inputEl.value = typeof it==='string' ? it : it[0];
+    listEl.style.display='none'; items=[];
+    onPick(it);
+  }
+  inputEl.addEventListener('input', ()=>{ activeIdx=-1; render(); });
+  inputEl.addEventListener('keydown', (e)=>{
+    if(listEl.style.display==='none') return;
+    if(e.key==='ArrowDown'){ e.preventDefault(); activeIdx=Math.min(activeIdx+1, items.length-1); render(); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); activeIdx=Math.max(activeIdx-1,0); render(); }
+    else if(e.key==='Enter'){ if(activeIdx>=0){ e.preventDefault(); pick(items[activeIdx]); } }
+    else if(e.key==='Escape'){ listEl.style.display='none'; }
+  });
+  inputEl.addEventListener('blur', ()=> setTimeout(()=>{ listEl.style.display='none'; }, 150));
+}
+
+/* ============ EKRANLAR ============ */
+
+function renderHome(){
+  loadLocal();
+  app.innerHTML = `
+    <h1 class="brand">ORTAK OYUNCU</h1>
+    <p class="brand-sub">İki takım yaz, ortak oynadığı futbolcuyu rakibinden önce bul.</p>
+    <div class="card">
+      <div class="field">
+        <label>Rumuzun</label>
+        <input type="text" id="nameInput" maxlength="16" placeholder="Örn: Efe" value="${myName ? myName.replace(/"/g,'') : ''}">
+      </div>
+      <button class="btn-primary" id="createBtn">Oda Kur</button>
+      <div class="divider-or">VEYA</div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Oda Kodu</label>
+        <input type="text" id="codeInput" maxlength="5" placeholder="ör: A7K2M" style="text-transform:uppercase; letter-spacing:3px;">
+      </div>
+      <button class="btn-ghost" id="joinBtn">Odaya Katıl</button>
+      <div class="error-msg" id="homeError" style="display:none;"></div>
+    </div>
+    <p class="footer-note">Bu sayfayı rakibine gönder, oda kodunu paylaş. Oynamak için ikinizin de bu sayfayı açık tutması yeterli.</p>
+  `;
+  document.getElementById('createBtn').onclick = onCreate;
+  document.getElementById('joinBtn').onclick = onJoin;
+  document.getElementById('nameInput').addEventListener('keydown', e=>{ if(e.key==='Enter') onCreate(); });
+}
+
+function showHomeError(msg){
+  const el = document.getElementById('homeError');
+  if(el){ el.textContent = msg; el.style.display='block'; }
+}
+
+async function onCreate(){
+  const name = document.getElementById('nameInput').value.trim();
+  if(!name){ showHomeError('Lütfen bir rumuz gir.'); return; }
+  if(!ready){ showHomeError('Bağlantı hazırlanıyor, birkaç saniye sonra tekrar dene.'); return; }
+  myName = name; saveLocal();
+  const code = genRoomCode();
+  const ref = db.doc('rooms/' + code);
+  try{
+    await ref.set({
+      status:'waiting',
+      players:[{id:myId,name:myName}],
+      clubs:{},
+      guesses:{},
+      winner:null,
+      winnerName:null,
+      correctPlayer:null,
+      roundStart:null,
+      duration:90000,
+      createdAt: Date.now()
+    });
+    roomCode = code; saveLocal();
+    enterRoom();
+  }catch(e){
+    showHomeError('Oda oluşturulamadı, tekrar dene.');
+  }
+}
+
+async function onJoin(){
+  const name = document.getElementById('nameInput').value.trim();
+  const code = document.getElementById('codeInput').value.trim().toUpperCase();
+  if(!name){ showHomeError('Lütfen bir rumuz gir.'); return; }
+  if(!code || code.length<4){ showHomeError('Geçerli bir oda kodu gir.'); return; }
+  if(!ready){ showHomeError('Bağlantı hazırlanıyor, birkaç saniye sonra tekrar dene.'); return; }
+  myName = name; saveLocal();
+  const ref = db.doc('rooms/' + code);
+  try{
+    const snap = await ref.get();
+    if(!snap.exists){ showHomeError('Bu kodda bir oda bulamadım.'); return; }
+    const data = snap.data;
+    let players = data.players || [];
+    const already = players.find(p=>p.id===myId);
+    if(!already){
+      if(players.length>=2){ showHomeError('Bu oda dolu.'); return; }
+      players = [...players, {id:myId,name:myName}];
+      await ref.update({players});
+    }
+    roomCode = code; saveLocal();
+    enterRoom();
+  }catch(e){
+    showHomeError('Odaya katılamadım, tekrar dene.');
+  }
+}
+
+function enterRoom(){
+  if(unsub) unsub();
+  app.innerHTML = `<div class="card"><p class="hint">Bağlanıyor…</p></div>`;
+  const ref = db.doc('rooms/' + roomCode);
+  unsub = ref.onSnapshot(snap=>{
+    if(!snap.exists){ roomData=null; renderMissingRoom(); return; }
+    roomData = snap.data;
+    routeRender();
+  }, err=>{
+    renderConnError();
+  });
+}
+
+function renderMissingRoom(){
+  app.innerHTML = `
+    <div class="card center-msg">
+      <div class="big">Oda bulunamadı</div>
+      <p class="small">Bu oda silinmiş olabilir.</p>
+    </div>
+    <button class="btn-ghost" id="backHome">Ana Sayfaya Dön</button>
+  `;
+  document.getElementById('backHome').onclick = ()=>{ roomCode=null; saveLocal(); renderHome(); };
+}
+
+function renderConnError(){
+  app.innerHTML = `<div class="card center-msg"><div class="big">Bağlantı sorunu</div><p class="small">Sayfayı yenilemeyi dene.</p></div>`;
+}
+
+function routeRender(){
+  if(!roomData) return;
+  clearInterval(timerInterval);
+  const players = roomData.players || [];
+  const iAmIn = players.some(p=>p.id===myId);
+  if(!iAmIn){ renderMissingRoom(); return; }
+
+  if(players.length < 2){
+    renderWaiting();
+  } else if(roomData.status === 'waiting'){
+    // her iki oyuncu da geldi, otomatik seçime geç
+    db.doc('rooms/'+roomCode).update({status:'picking'}).catch(()=>{});
+    renderWaiting();
+  } else if(roomData.status === 'picking'){
+    renderPicking();
+  } else if(roomData.status === 'battle'){
+    renderBattle();
+  } else if(roomData.status === 'finished'){
+    renderFinished();
+  }
+}
+
+function renderWaiting(){
+  const players = roomData.players || [];
+  const me = players.find(p=>p.id===myId);
+  const opp = players.find(p=>p.id!==myId);
+  app.innerHTML = `
+    <h1 class="brand" style="font-size:30px;">ODA: ${roomCode}</h1>
+    <div class="card">
+      <div class="code-badge">${roomCode}</div>
+      <p class="hint">Bu kodu rakibine gönder</p>
+      <div class="players-row" style="margin-top:20px;">
+        <div class="player-chip">
+          <div class="avatar">${(me?.name||'?')[0].toUpperCase()}</div>
+          <div class="pname">${me?.name||''}</div>
+          <div class="pstatus">Sen</div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="player-chip">
+          <div class="avatar ${opp?'':'empty'}">${opp ? opp.name[0].toUpperCase() : '…'}</div>
+          <div class="pname">${opp ? opp.name : 'Bekleniyor'}</div>
+          <div class="pstatus">${opp ? 'Hazır' : 'Katılması bekleniyor'}</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn-ghost" id="leaveBtn">Odadan Çık</button>
+  `;
+  document.getElementById('leaveBtn').onclick = leaveRoom;
+}
+
+function leaveRoom(){
+  if(unsub) unsub();
+  unsub = null;
+  roomCode = null; saveLocal();
+  renderHome();
+}
+
+function renderPicking(){
+  const players = roomData.players || [];
+  const opp = players.find(p=>p.id!==myId);
+  const clubs = roomData.clubs || {};
+  const myClub = clubs[myId];
+  const oppClub = clubs[opp?.id];
+  app.innerHTML = `
+    <h1 class="brand" style="font-size:30px;">TAKIMINI SEÇ</h1>
+    <p class="brand-sub">İkiniz de birer takım seçin. İkisi de seçilince maç başlar.</p>
+    <div class="card">
+      <div class="players-row" style="margin-bottom:6px;">
+        <div class="player-chip">
+          <div class="avatar">${'S'}</div>
+          <div class="pname">Sen</div>
+          <div class="pstatus">${myClub ? '✓ ' + myClub : 'Seçim yapılıyor…'}</div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="player-chip">
+          <div class="avatar">${(opp?.name||'?')[0].toUpperCase()}</div>
+          <div class="pname">${opp?.name||''}</div>
+          <div class="pstatus">${oppClub ? '✓ Seçti' : 'Seçiyor…'}</div>
+        </div>
+      </div>
+      ${myClub ? `<p class="hint" style="margin-top:14px;">Seçimin: <strong style="color:var(--gold-bright)">${myClub}</strong></p>` : `
+      <div class="field" style="margin-top:14px;">
+        <label>Kulüp ara</label>
+        <input type="text" id="clubInput" placeholder="ör: Galatasaray, Real Madrid...">
+        <div class="autocomplete-list" id="clubList" style="display:none;"></div>
+      </div>`}
+    </div>
+    <button class="btn-ghost" id="leaveBtn">Odadan Çık</button>
+  `;
+  document.getElementById('leaveBtn').onclick = leaveRoom;
+  if(!myClub){
+    const inp = document.getElementById('clubInput');
+    const list = document.getElementById('clubList');
+    attachAutocomplete(inp, list, CLUBS, async (club)=>{
+      try{
+        await db.doc('rooms/'+roomCode).update({['clubs.'+myId]: club});
+        maybeStartBattle();
+      }catch(e){}
+    });
+  } else {
+    maybeStartBattle();
+  }
+}
+
+async function maybeStartBattle(){
+  const snap = await db.doc('rooms/'+roomCode).get();
+  if(!snap.exists) return;
+  const d = snap.data;
+  const clubs = d.clubs || {};
+  const ids = Object.keys(clubs);
+  if(ids.length>=2 && d.status==='picking'){
+    await db.doc('rooms/'+roomCode).update({
+      status:'battle',
+      roundStart: Date.now(),
+    }).catch(()=>{});
+  }
+}
+
+let myWrongGuesses = [];
+
+function renderBattle(){
+  const players = roomData.players || [];
+  const opp = players.find(p=>p.id!==myId);
+  const clubs = roomData.clubs || {};
+  const clubNames = Object.values(clubs);
+  const [clubA, clubB] = clubNames;
+
+  app.innerHTML = `
+    <h1 class="brand" style="font-size:28px; text-align:center;">ORTAK FUTBOLCUYU BUL</h1>
+    <div class="timer" id="timerEl">--</div>
+    <div class="club-vs">
+      <div class="club-box"><div class="lbl">TAKIM 1</div><div class="name">${clubA||'?'}</div></div>
+      <div class="vs-mid">×</div>
+      <div class="club-box"><div class="lbl">TAKIM 2</div><div class="name">${clubB||'?'}</div></div>
+    </div>
+    <div class="card">
+      <div class="field" style="margin-bottom:8px;">
+        <label>Oyuncu adı yaz</label>
+        <input type="text" id="guessInput" placeholder="Bir futbolcu adı yaz..." autocomplete="off">
+        <div class="autocomplete-list" id="guessList" style="display:none;"></div>
+      </div>
+      <p class="hint">Rakibin: ${opp?.name||''} — o da tahmin ediyor</p>
+      <div class="guess-list" id="wrongList"></div>
+    </div>
+  `;
+  const inp = document.getElementById('guessInput');
+  const list = document.getElementById('guessList');
+  attachAutocomplete(inp, list, PLAYERS, (item)=>{
+    submitGuess(item, clubA, clubB);
+    inp.value='';
+  }, (item)=> item[1].slice(0,3).join(' · '));
+
+  renderWrongList();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(updateTimer, 250);
+  updateTimer();
+}
+
+function renderWrongList(){
+  const el = document.getElementById('wrongList');
+  if(!el) return;
+  el.innerHTML = myWrongGuesses.slice(-5).reverse().map(n=>`<div class="guess-item"><span class="x">✕</span> ${n}</div>`).join('');
+}
+
+async function submitGuess(item, clubA, clubB){
+  const [name, playerClubs] = item;
+  const has = c => playerClubs.some(pc => normTr(pc)===normTr(c));
+  const correct = clubA && clubB && has(clubA) && has(clubB);
+  if(correct){
+    try{
+      const snap = await db.doc('rooms/'+roomCode).get();
+      if(snap.exists && snap.data.status==='battle' && !snap.data.winner){
+        await db.doc('rooms/'+roomCode).update({
+          status:'finished', winner: myId, winnerName: myName, correctPlayer: name
+        });
+      }
+    }catch(e){}
+  } else {
+    if(!myWrongGuesses.includes(name)){
+      myWrongGuesses.push(name);
+      renderWrongList();
+    }
+  }
+}
+
+function updateTimer(){
+  const el = document.getElementById('timerEl');
+  if(!el || !roomData || !roomData.roundStart) return;
+  const remain = Math.max(0, roomData.duration - (Date.now() - roomData.roundStart));
+  const s = Math.ceil(remain/1000);
+  el.textContent = s;
+  el.classList.toggle('low', s<=15);
+  if(remain<=0){
+    clearInterval(timerInterval);
+    handleTimeUp();
+  }
+}
+
+async function handleTimeUp(){
+  try{
+    const snap = await db.doc('rooms/'+roomCode).get();
+    if(snap.exists && snap.data.status==='battle' && !snap.data.winner){
+      await db.doc('rooms/'+roomCode).update({status:'finished', winner:null, winnerName:null, correctPlayer:null});
+    }
+  }catch(e){}
+}
+
+function renderFinished(){
+  myWrongGuesses = [];
+  const iWon = roomData.winner === myId;
+  const noWinner = !roomData.winner;
+  const correctPlayerName = roomData.correctPlayer;
+  const correctPlayerData = PLAYERS.find(p=>p[0]===correctPlayerName);
+  app.innerHTML = `
+    <div class="card center-msg">
+      ${noWinner ? `
+        <div class="big">Süre doldu ⏱</div>
+        <p class="small">Kimse doğru cevabı bulamadı.</p>
+      ` : `
+        <div class="big">${iWon ? 'Kazandın! 🏆' : (roomData.winnerName + ' kazandı')}</div>
+        <p class="small">Doğru cevap: <strong style="color:var(--gold-bright)">${correctPlayerName}</strong></p>
+        ${correctPlayerData ? `<p class="winner-clubs">${correctPlayerData[1].join(' → ')}</p>` : ''}
+      `}
+    </div>
+    <button class="btn-primary" id="againBtn">Yeni Tur</button>
+    <button class="btn-ghost" id="leaveBtn2" style="margin-top:10px;">Odadan Çık</button>
+  `;
+  document.getElementById('againBtn').onclick = async ()=>{
+    try{
+      await db.doc('rooms/'+roomCode).update({
+        status:'picking', clubs:{}, winner:null, winnerName:null, correctPlayer:null, roundStart:null
+      });
+    }catch(e){}
+  };
+  document.getElementById('leaveBtn2').onclick = leaveRoom;
+}
+
+/* ============ BAŞLAT ============ */
+(async function init(){
+  loadLocal();
+  db = dbWrapper;
+  ready = true;
+  if(roomCode){
+    try{
+      const snap = await db.doc('rooms/'+roomCode).get();
+      if(snap.exists && (snap.data.players||[]).some(p=>p.id===myId)){
+        enterRoom();
+        return;
+      }
+    }catch(e){}
+    roomCode = null; saveLocal();
+  }
+  renderHome();
+})();
+</script>
+</body>
+</html>
